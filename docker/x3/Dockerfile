@@ -8,6 +8,8 @@ COPY docker/x3/dwa_nav_params.yaml src/yahboomcar_nav/params
 # 湾谷地图
 COPY docker/map/wangu/* src/yahboomcar_nav/maps
 # .bashrc，清除了厂商提供的.bashrc内写死的ROS_DOMAIN_ID，防止多台机器在同一局域网下运行时冲突
+# .bashrc，清除了厂商提供的.bashrc内写死的RPLIDAR_TYPE，因为我们有使用a1和s2两种激光雷达
+# 后续可以在docker run时指定
 COPY docker/x3/.bashrc /root/.bashrc
 # 代码
 COPY . src/hj_nav
