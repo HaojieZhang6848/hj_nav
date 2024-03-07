@@ -14,6 +14,7 @@ COPY docker/map/wangu/* src/limo_ros2/limo_bringup/maps
 RUN bash -c "pip3 install -r src/hj_nav/nav_http_server/requirements.txt"
 RUN bash -c "pip3 install -r src/hj_nav/red_detector/requirements.txt"
 RUN bash -c "pip3 install -r src/hj_nav/hj_nav_launch/requirements.txt"
+RUN bash -c "source /opt/ros/foxy/setup.bash && rosdep update --rosdistro foxy && rosdep install --from-paths src --ignore-src -r -y"
 
 # 编译
 RUN bash -c "source /opt/ros/foxy/setup.bash && source install/setup.bash && colcon build --symlink-install"
