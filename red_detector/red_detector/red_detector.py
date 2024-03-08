@@ -15,7 +15,8 @@ try:
     from .utils import quaternion_to_eular, eular_to_quaternion  # for ros2 run
 except:
     from utils import quaternion_to_eular, eular_to_quaternion  # for direct run
-
+from multiprocessing.shared_memory import SharedMemory
+import atexit
 
 parser = ArgumentParser()
 parser.add_argument('--debug', action='store_true')
@@ -23,7 +24,20 @@ args, unknown = parser.parse_known_args()
 
 IS_DEUBG = args.debug
 
+# 创建共享内存，用来在red_detector和red_obj_server之间传递近5次检测是否有红色物体的结果
+sz = 5
+shm = SharedMemory(name='red_detected', create=True, size=sz)
+def close_shm(shmm):
+    if shmm and shmm._name:
+        shmm.close()
+        shmm.unlink()
+atexit.register(close_shm, shm)
 
+def update_red_detected(red_detected: bool):
+    shm.buf[1:] = shm.buf[:-1]
+    shm.buf[0] = int(red_detected)
+    return
+    
 class RedDetectorNode(Node):
 
     def __init__(self):
@@ -92,11 +106,15 @@ class RedDetectorNode(Node):
         hsv = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
 
         # 设定红色的阈值
-        lower_red = np.array([0, 100, 100])
-        upper_red = np.array([10, 255, 255])
+        lower_red_1 = np.array([0, 100, 100])
+        upper_red_1 = np.array([10, 255, 255])
+        lower_red_2 = np.array([170, 100, 100])
+        upper_red_2 = np.array([180, 255, 255])
 
         # 根据阈值构建掩模
-        mask = cv2.inRange(hsv, lower_red, upper_red)
+        mask1 = cv2.inRange(hsv, lower_red_1, upper_red_1)
+        mask2 = cv2.inRange(hsv, lower_red_2, upper_red_2)
+        mask = cv2.bitwise_or(mask1, mask2)
 
         # 执行形态学操作以去除噪声
         kernel = np.ones((5, 5), np.uint8)
@@ -176,9 +194,9 @@ class RedDetectorNode(Node):
 
     def on_timer(self):
         if not self.check_color_depth():
-            return
+            return update_red_detected(False)
         if not self.check_camera_k():
-            return
+            return update_red_detected(False)
 
         # 将ROS消息转换为OpenCV格式
         color_image = self.cv_bridge.imgmsg_to_cv2(self.color, 'bgr8')
@@ -192,7 +210,7 @@ class RedDetectorNode(Node):
 
         if len(red_contours) == 0:
             self.get_logger().info('No red object detected')
-            return
+            return update_red_detected(False)
 
         # 找到red_contours中最大的那个的外接矩形，计算其中点坐标，绘制矩形
         max_contour = max(red_contours, key=cv2.contourArea)
@@ -208,7 +226,7 @@ class RedDetectorNode(Node):
         depth = depth_image[cy, cx] / 1000.0
         if depth == 0:
             self.get_logger().warn('Depth at center is 0')
-            return
+            return update_red_detected(False)
         self.get_logger().info(f'Depth at center: {depth} m')
 
         # 根据相机内参计算中点的3D坐标
@@ -217,7 +235,11 @@ class RedDetectorNode(Node):
         self.get_logger().info(f'3D coordinate at center: {xyz}')
 
         # 发布中点的3D坐标到tf中（上面计算出来的xyz，相对于相机坐标系camera_color_optical_frame）
-        self.broadcast_tf(xyz)
+        try:
+            self.broadcast_tf(xyz)
+            update_red_detected(True)
+        finally:
+            update_red_detected(False)
 
 
 def main():
