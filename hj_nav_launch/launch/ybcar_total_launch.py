@@ -14,7 +14,7 @@ def generate_launch_description():
     
     red_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            [os.path.join(get_package_share_directory('hj_nav_launch'), 'launch', 'red_launch.py')]
+            [os.path.join(get_package_share_directory('hj_nav_launch'), 'launch', 'ybcar_red_launch.py')]
         )
     )
     
