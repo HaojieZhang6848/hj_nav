@@ -17,6 +17,10 @@ except:
     from utils import quaternion_to_eular, eular_to_quaternion  # for direct run
 from multiprocessing.shared_memory import SharedMemory
 import atexit
+import logging
+
+# 设置日志级别和格式
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 parser = ArgumentParser()
 parser.add_argument('--debug', action='store_true')
@@ -34,6 +38,7 @@ def close_shm(shmm):
 atexit.register(close_shm, shm)
 
 def update_red_detected(red_detected: bool):
+    logging.info(f'Update red_detected: {red_detected}')
     shm.buf[1:] = shm.buf[:-1]
     shm.buf[0] = int(red_detected)
     return
@@ -221,12 +226,26 @@ class RedDetectorNode(Node):
 
         # 保存调试图像
         self.save_debug_image(color_image, depth_colormap)
-
-        # 中点的深度值
-        depth = depth_image[cy, cx] / 1000.0
+        
+        # 获得目标中点或附近的深度值
+        def get_depth(cv_x, cv_y):
+            # 如果cv_x, cv_y的深度值为0，则在附近尝试找一个不为0的深度值
+            if depth_image[cv_y, cv_x] != 0:
+                return depth_image[cv_y, cv_x] / 1000.0
+            else:
+                for i in range(-3, 2):
+                    for j in range(-3, 2):
+                        # 判断是否越界
+                        if cv_x + i < 0 or cv_x + i >= depth_image.shape[1] or cv_y + j < 0 or cv_y + j >= depth_image.shape[0]:
+                            continue
+                        if depth_image[cv_y + j, cv_x + i] != 0:
+                            return depth_image[cv_y + j, cv_x + i] / 1000.0
+            return 0
+        depth = get_depth(cx, cy)
         if depth == 0:
             self.get_logger().warn('Depth at center is 0')
             return update_red_detected(False)
+        
         self.get_logger().info(f'Depth at center: {depth} m')
 
         # 根据相机内参计算中点的3D坐标

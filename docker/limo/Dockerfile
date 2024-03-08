@@ -16,5 +16,8 @@ RUN bash -c "pip3 install -r src/hj_nav/red_detector/requirements.txt"
 RUN bash -c "pip3 install -r src/hj_nav/hj_nav_launch/requirements.txt"
 RUN bash -c "source /opt/ros/foxy/setup.bash && rosdep update --rosdistro foxy && rosdep install --from-paths src --ignore-src -r -y"
 
+# 导航参数
+COPY docker/limo/navigation2.yaml src/limo_ros2/limo_bringup/param/navigation2.yaml
+
 # 编译
 RUN bash -c "source /opt/ros/foxy/setup.bash && source install/setup.bash && colcon build --symlink-install"
