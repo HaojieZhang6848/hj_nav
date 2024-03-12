@@ -16,8 +16,15 @@ def generate_launch_description():
             [os.path.join(get_package_share_directory('hj_nav_launch'), 'launch', 'limocar_red_launch.py')]
         )
     )
+    
+    cam_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [os.path.join(get_package_share_directory('hj_nav_launch'), 'launch', 'limocar_cam_launch.py')]
+        )
+    )
 
     return LaunchDescription([
         nav_launch,
-        red_launch
+        red_launch,
+        cam_launch
     ])

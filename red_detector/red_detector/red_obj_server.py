@@ -6,11 +6,12 @@ try:
     from .utils import quaternion_to_eular  # for ros2 run
 except:
     from utils import quaternion_to_eular  # for direct run
-from flask import Flask, jsonify, make_response
+from flask import Flask, jsonify, make_response, request
 from multiprocessing.shared_memory import SharedMemory
 import time
 import atexit
 from datetime import datetime
+from flask_cors import CORS
 
 # 设置日志级别和格式
 import logging
@@ -75,6 +76,7 @@ class RedObjServer(Node):
 rclpy.init()
 node = RedObjServer()     
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/red_loc', methods=['GET'])
 def red_loc():
@@ -99,9 +101,18 @@ def red_loc():
         }
         return jsonify(dat)
     except Exception as e:
-        code = 404 if 'not detected' in str(e) else 500
-        return make_response(jsonify({'error': str(e), 'timestamp': int(time.time())}), code)
-        
+        e.code = 404 if 'not detected' in str(e) else 500
+        raise e
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    import time
+    path = request.path
+    method = request.method
+    timestamp = int(time.time())
+    code = 500 if not hasattr(error, 'code') else error.code
+    message = str(error)
+    return make_response(jsonify({'path': path, 'method': method, 'timestamp': timestamp, 'code': code, 'message': message}), code)  
 
 def main():
     host = '0.0.0.0'

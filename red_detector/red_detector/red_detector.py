@@ -257,7 +257,7 @@ class RedDetectorNode(Node):
         try:
             self.broadcast_tf(xyz)
             update_red_detected(True)
-        finally:
+        except Exception as e:
             update_red_detected(False)
 
 

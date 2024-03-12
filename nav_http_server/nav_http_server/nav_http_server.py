@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from waitress import serve
 from argparse import ArgumentParser
 from rclpy.action import ActionClient
@@ -12,6 +12,7 @@ except:
     from utils import eular_to_quaternion  # for python3 nav_http_server.py
 import logging
 from threading import Thread, Semaphore
+from flask_cors import CORS
 
 # 设置日志级别和格式
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -100,6 +101,7 @@ node = SendNavGoalNode()
 # t.start()
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 @app.route('/nav', methods=['POST'])
@@ -111,18 +113,31 @@ def nav():
 
     # check if the input is valid
     if x is None or y is None or theta is None:
-        return jsonify({'status': 'error', 'message': 'invalid input'})
-
+        err = RuntimeError('invalid input: x, y, theta must be provided')
+        err.code = 400
+        raise err
     success, message = node.send_nav_goal(x, y, theta)
     if success:
         return jsonify({'status': 'success', 'message': message})
     else:
-        return jsonify({'status': 'error', 'message': message})
+        err = RuntimeError(message)
+        err.code = 500
+        raise err
 
 @app.route('/is_moving', methods=['GET'])
 def is_moving():
     # 返回机器人是否在移动
     return jsonify({'is_moving': node.is_moving})
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    import time
+    path = request.path
+    method = request.method
+    timestamp = int(time.time())
+    code = 500 if not hasattr(error, 'code') else error.code
+    message = str(error)
+    return make_response(jsonify({'path': path, 'method': method, 'timestamp': timestamp, 'code': code, 'message': message}), code)
 
 def main():
     port = 5000

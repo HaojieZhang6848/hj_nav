@@ -1,4 +1,4 @@
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 import os
 from ament_index_python.packages import get_package_share_directory
@@ -18,7 +18,14 @@ def generate_launch_description():
         )
     )
     
+    cam_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [os.path.join(get_package_share_directory('hj_nav_launch'), 'launch', 'ybcar_cam_launch.py')]
+        )
+    )
+    
     return LaunchDescription([
         ybcar_nav_launch,
-        red_launch
+        red_launch,
+        cam_launch
     ])

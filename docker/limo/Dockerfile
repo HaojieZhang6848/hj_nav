@@ -1,4 +1,4 @@
-FROM huajuan6848/limo_ros2:0.0.1
+FROM huajuan6848/limo_ros2:0.0.2
 
 WORKDIR /root/agx_ws
 

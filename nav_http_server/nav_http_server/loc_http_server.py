@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, make_response
 from waitress import serve
 from argparse import ArgumentParser
 import rclpy
@@ -9,6 +9,7 @@ except:
     from utils import quaternion_to_eular  # for python3 nav_http_server.py
 import logging
 from datetime import datetime
+from flask_cors import CORS
 
 # 设置日志级别和格式
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -48,6 +49,7 @@ rclpy.init()
 node = RobotLocNode()
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 @app.route('/loc', methods=['GET'])
@@ -56,6 +58,15 @@ def loc():
     x, y, theta = node.robot_loc()
     return jsonify({'x': x, 'y': y, 'theta': theta})
 
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    import time
+    path = request.path
+    method = request.method
+    timestamp = int(time.time())
+    code = 500 if not hasattr(error, 'code') else error.code
+    message = str(error)
+    return make_response(jsonify({'path': path, 'method': method, 'timestamp': timestamp, 'code': code, 'message': message}), code)
 
 def main():
     host = '0.0.0.0'
