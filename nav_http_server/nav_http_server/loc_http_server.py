@@ -58,6 +58,10 @@ def loc():
     x, y, theta = node.robot_loc()
     return jsonify({'x': x, 'y': y, 'theta': theta})
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'})
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(error):
     import time

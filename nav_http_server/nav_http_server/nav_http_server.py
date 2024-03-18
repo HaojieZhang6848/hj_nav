@@ -129,6 +129,10 @@ def is_moving():
     # 返回机器人是否在移动
     return jsonify({'is_moving': node.is_moving})
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'})
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(error):
     import time

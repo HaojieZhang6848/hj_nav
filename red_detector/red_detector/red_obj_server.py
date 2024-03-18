@@ -104,6 +104,10 @@ def red_loc():
         e.code = 404 if 'not detected' in str(e) else 500
         raise e
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'})
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(error):
     import time
