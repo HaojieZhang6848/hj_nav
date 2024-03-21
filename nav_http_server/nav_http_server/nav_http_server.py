@@ -8,11 +8,14 @@ from rclpy.executors import MultiThreadedExecutor
 from datetime import datetime
 try:
     from .utils import eular_to_quaternion  # for ros2 run
+    from .models import NavRequest, InitialPoseRequest
 except:
     from utils import eular_to_quaternion  # for python3 nav_http_server.py
+    from models import NavRequest, InitialPoseRequest
 import logging
 from threading import Thread, Semaphore
 from flask_cors import CORS
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
 # 设置日志级别和格式
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -42,7 +45,23 @@ class SendNavGoalNode(rclpy.node.Node):
         self.is_moving = False
         self.lock = Semaphore(1)
         self.executor = MultiThreadedExecutor(num_threads=3)
-
+        self.initial_pose_publisher = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
+    
+    def send_initial_pose(self, x, y, theta):
+        pose_msg = PoseWithCovarianceStamped()
+        pose_msg.header.frame_id = MAP_FRAME
+        pose_msg.pose.pose.position.x = float(x)
+        pose_msg.pose.pose.position.y = float(y)
+        pose_msg.pose.pose.position.z = 0.0
+       
+        q = eular_to_quaternion(0, 0, theta)
+        pose_msg.pose.pose.orientation.x = q[0]
+        pose_msg.pose.pose.orientation.y = q[1]
+        pose_msg.pose.pose.orientation.z = q[2]
+        pose_msg.pose.pose.orientation.w = q[3]
+        
+        self.initial_pose_publisher.publish(pose_msg)
+        
     def send_nav_goal(self, x, y, theta):
         # 如果多次以相同的参数调用send_nav_goal，则不会发送新的目标
         if self.last_goal is not None:
@@ -106,10 +125,17 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/nav', methods=['POST'])
 def nav():
-    # 控制机器人移动到指定位置
-    x = request.json['x']
-    y = request.json['y']
-    theta = request.json['theta']
+    try:
+        req : NavRequest = NavRequest(
+            x = request.json.get('x'),
+            y = request.json.get('y'),
+            theta = request.json.get('theta'))
+    except ValueError as ve:
+        msg = ve.errors()[0]['msg']
+        err = RuntimeError(msg)
+        err.code = 400
+        raise err
+    x = req.x; y = req.y; theta = req.theta
 
     # check if the input is valid
     if x is None or y is None or theta is None:
@@ -123,6 +149,28 @@ def nav():
         err = RuntimeError(message)
         err.code = 500
         raise err
+
+@app.route('/initial_pose', methods=['POST'])
+def initial_pose():
+    try:
+        req : InitialPoseRequest = InitialPoseRequest(
+            x = request.json.get('x'),
+            y = request.json.get('y'),
+            theta = request.json.get('theta'))
+    except ValueError as ve:
+        msg = ve.errors()[0]['msg']
+        err = RuntimeError(msg)
+        err.code = 400
+        raise err
+    x = req.x; y = req.y; theta = req.theta
+    
+    if x is None or y is None or theta is None:
+        err = RuntimeError('invalid input: x, y, theta must be provided')
+        err.code = 400
+        raise err
+    
+    node.send_initial_pose(x, y, theta)
+    return jsonify({'status': 'success'})
 
 @app.route('/is_moving', methods=['GET'])
 def is_moving():
