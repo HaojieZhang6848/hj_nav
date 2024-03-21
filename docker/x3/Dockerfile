@@ -13,6 +13,8 @@ COPY docker/map/wangu/* src/yahboomcar_nav/maps
 COPY docker/x3/.bashrc /root/.bashrc
 # 代码
 COPY . src/hj_nav
+# 加入vim
+RUN apt-get update && apt-get install -y vim
 # 安装依赖
 RUN bash -c "pip3 install -r src/hj_nav/nav_http_server/requirements.txt"
 RUN bash -c "pip3 install -r src/hj_nav/red_detector/requirements.txt"

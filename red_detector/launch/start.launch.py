@@ -1,4 +1,5 @@
 from launch import LaunchDescription
+from launch.actions import TimerAction
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -15,7 +16,13 @@ def generate_launch_description():
         output='screen'
     )
     
+    # 创建一个5秒的定时器动作
+    delay_timer = TimerAction(
+        period=5.0,
+        actions=[red_obj_server]
+    )
+    
     return LaunchDescription([
         red_detector,
-        red_obj_server
+        delay_timer
     ])

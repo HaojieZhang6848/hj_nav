@@ -10,6 +10,9 @@ COPY . src/hj_nav
 # 湾谷地图
 COPY docker/map/wangu/* src/limo_ros2/limo_bringup/maps
 
+# 加入vim
+RUN apt-get update && apt-get install -y vim
+
 # 安装依赖
 RUN bash -c "pip3 install -r src/hj_nav/nav_http_server/requirements.txt"
 RUN bash -c "pip3 install -r src/hj_nav/red_detector/requirements.txt"
