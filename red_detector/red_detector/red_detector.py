@@ -18,6 +18,7 @@ except:
 from multiprocessing.shared_memory import SharedMemory
 import atexit
 import logging
+import os
 
 # 设置日志级别和格式
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -27,6 +28,10 @@ parser.add_argument('--debug', action='store_true')
 args, unknown = parser.parse_known_args()
 
 IS_DEUBG = args.debug
+
+# 防止下面创建共享内存时出现FileExistsError
+if os.path.exists('/dev/shm/red_detected'):
+    os.remove('/dev/shm/red_detected')
 
 # 创建共享内存，用来在red_detector和red_obj_server之间传递近5次检测是否有红色物体的结果
 sz = 5

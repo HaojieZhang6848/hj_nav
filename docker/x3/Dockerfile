@@ -1,5 +1,9 @@
 FROM yahboomtechnology/ros-foxy:4.0.5
 WORKDIR /root/yahboomcar_ros2_ws/yahboomcar_ws
+# 卸载原有的navigation stack
+RUN apt-get remove ros-foxy-navigation2 -y && apt-get autoremove -y
+# 下载修改过的navigation stack
+RUN cd src && git clone https://github.com/HaojieZhang6848/navigation2.git -b foxy-devel && cd ..
 # ROS_DOMAIN_ID，这里先写死，后续可以在docker run时指定
 ENV ROS_DOMAIN_ID=32
 RUN mkdir -p src/hj_nav
@@ -7,7 +11,7 @@ RUN mkdir -p src/hj_nav
 COPY docker/x3/dwa_nav_params.yaml src/yahboomcar_nav/params
 # 湾谷地图
 COPY docker/map/wangu/* src/yahboomcar_nav/maps
-# .bashrc，清除了厂商提供的.bashrc内写死的ROS_DOMAIN_ID，防止多台机器在同一局域网下运行时冲突
+# .bashrc，清除了厂商提供的.banshrc内写死的ROS_DOMAIN_ID，防止多台机器在同一局域网下运行时冲突
 # .bashrc，清除了厂商提供的.bashrc内写死的RPLIDAR_TYPE，因为我们有使用a1和s2两种激光雷达
 # 后续可以在docker run时指定
 COPY docker/x3/.bashrc /root/.bashrc
