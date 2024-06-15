@@ -1,5 +1,7 @@
 FROM yahboomtechnology/ros-foxy:4.0.5
 WORKDIR /root/yahboomcar_ros2_ws/yahboomcar_ws
+# 换源.....
+RUN sed -i 's/ports.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
 # 卸载原有的navigation stack
 RUN apt-get remove ros-foxy-navigation2 -y && apt-get autoremove -y
 # 下载修改过的navigation stack
@@ -8,7 +10,7 @@ RUN cd src && git clone https://github.com/HaojieZhang6848/navigation2.git -b fo
 ENV ROS_DOMAIN_ID=32
 RUN mkdir -p src/hj_nav
 # 导航参数
-COPY docker/x3/dwa_nav_params.yaml src/yahboomcar_nav/params
+COPY docker/x3/dwa_nav_params_jetson.yaml src/yahboomcar_nav/params/dwa_nav_params.yaml
 # 湾谷地图
 COPY docker/map/wangu/* src/yahboomcar_nav/maps
 # .bashrc，清除了厂商提供的.banshrc内写死的ROS_DOMAIN_ID，防止多台机器在同一局域网下运行时冲突

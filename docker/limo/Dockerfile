@@ -2,6 +2,9 @@ FROM huajuan6848/limo_ros2:0.0.3
 
 WORKDIR /root/agx_ws
 
+# 换源.....
+RUN sed -i 's/ports.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+
 RUN mkdir -p src/hj_nav
 
 # 复制源代码
