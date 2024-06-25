@@ -116,9 +116,9 @@ class RedDetectorNode(Node):
         hsv = cv2.cvtColor(color_image, cv2.COLOR_BGR2HSV)
 
         # 设定红色的阈值
-        lower_red_1 = np.array([0, 100, 100])
+        lower_red_1 = np.array([0, 100, 20])
         upper_red_1 = np.array([10, 255, 255])
-        lower_red_2 = np.array([170, 100, 100])
+        lower_red_2 = np.array([170, 100, 20])
         upper_red_2 = np.array([180, 255, 255])
 
         # 根据阈值构建掩模
@@ -232,21 +232,17 @@ class RedDetectorNode(Node):
         # 保存调试图像
         self.save_debug_image(color_image, depth_colormap)
         
-        # 获得目标中点或附近的深度值
-        def get_depth(cv_x, cv_y):
-            # 如果cv_x, cv_y的深度值为0，则在附近尝试找一个不为0的深度值
-            if depth_image[cv_y, cv_x] != 0:
-                return depth_image[cv_y, cv_x] / 1000.0
-            else:
-                for i in range(-3, 2):
-                    for j in range(-3, 2):
-                        # 判断是否越界
-                        if cv_x + i < 0 or cv_x + i >= depth_image.shape[1] or cv_y + j < 0 or cv_y + j >= depth_image.shape[0]:
-                            continue
-                        if depth_image[cv_y + j, cv_x + i] != 0:
-                            return depth_image[cv_y + j, cv_x + i] / 1000.0
-            return 0
-        depth = get_depth(cx, cy)
+        # 获得目标的深度值
+        def get_depth(x, y, w, h):
+            s = 0
+            n = 0
+            for i in range(y, y+h):
+                for j in range(x, x+w):
+                    if depth_image[i,j] > 0:
+                        s += depth_image[i,j]
+                        n += 1
+            return s / n / 1000.0 if n > 0 else 0
+        depth = get_depth(x, y, w, h)
         if depth == 0:
             self.get_logger().warn('Depth at center is 0')
             return update_red_detected(False)
