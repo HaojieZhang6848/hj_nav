@@ -1,0 +1,14 @@
+FROM yahboomtechnology/ros-foxy:4.0.5
+WORKDIR /root/yahboomcar_ros2_ws/yahboomcar_ws
+# 换源.....
+RUN sed -i 's/ports.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+# 卸载原有的navigation stack
+RUN apt-get remove ros-foxy-navigation2 -y && apt-get autoremove -y
+# 下载修改过的navigation stack
+RUN cd src && git clone https://github.com/HaojieZhang6848/navigation2.git -b foxy-devel && cd ..
+# 加入vim
+RUN apt-get update && apt-get install -y vim
+# 安装依赖
+RUN bash -c "source /opt/ros/foxy/setup.bash && rosdep update --rosdistro foxy && rosdep install --from-paths src --ignore-src -r -y"
+# 编译
+RUN bash -c "source /opt/ros/foxy/setup.bash && source install/setup.bash && colcon build --symlink-install"

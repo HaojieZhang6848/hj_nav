@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from rclpy.action import ActionClient
 import rclpy
 from nav2_msgs.action import NavigateToPose
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from datetime import datetime
 try:
     from .utils import eular_to_quaternion  # for ros2 run
@@ -13,9 +13,10 @@ except:
     from utils import eular_to_quaternion  # for python3 nav_http_server.py
     from models import NavRequest, InitialPoseRequest
 import logging
-from threading import Thread, Semaphore
+from threading import Thread
 from flask_cors import CORS
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from action_msgs.msg import GoalStatus
 
 # 设置日志级别和格式
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -32,7 +33,6 @@ NAVIGATE_TO_POSE_ACTION = args.navigate_to_pose_action
 DIST_THRESHOLD = 0.01
 ROT_THRESHOLD = 0.01
 
-
 class SendNavGoalNode(rclpy.node.Node):
     def __init__(self):
         ts = datetime.now().timestamp()
@@ -42,10 +42,8 @@ class SendNavGoalNode(rclpy.node.Node):
             self.get_logger().error('NavigateToPose action server not available after waiting')
             exit(1)
         self.last_goal = None
-        self.is_moving = False
-        self.lock = Semaphore(1)
-        self.executor = MultiThreadedExecutor(num_threads=3)
         self.initial_pose_publisher = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
+        self.goal_handles = []
     
     def send_initial_pose(self, x, y, theta):
         pose_msg = PoseWithCovarianceStamped()
@@ -64,7 +62,8 @@ class SendNavGoalNode(rclpy.node.Node):
         
     def send_nav_goal(self, x, y, theta):
         # 如果多次以相同的参数调用send_nav_goal，则不会发送新的目标
-        if self.last_goal is not None:
+        # 2024/06/26: 忽略这部分逻辑
+        if False:
             x_last, y_last, theta_last = self.last_goal
             dist = (x-x_last)**2 + (y-y_last)**2
             rot = (theta-theta_last)**2
@@ -85,39 +84,39 @@ class SendNavGoalNode(rclpy.node.Node):
         goal_msg.pose.pose.orientation.w = q[3]
 
         goal_handle_future = self.action_client.send_goal_async(goal_msg)
-        
-        # 这里的lock的目的是：当导航被抢占(前一个导航还没结束，又有新的导航请求)时
-        # 确保旧的导航将is_moving设置为False后，新的导航才将is_moving设置为True
-        # 如果上述两个过程的顺序颠倒，那么is_moving的值会错误
-        self.lock.acquire()
-        
-        rclpy.spin_until_future_complete(self, goal_handle_future, executor=self.executor)
+        import time
+        time.sleep(0.1)
         goal_handle = goal_handle_future.result()
-
+        
         if not goal_handle.accepted:
             self.get_logger().error('Goal rejected')
             return False, 'goal rejected'
-        
         self.get_logger().info('Move started')
-        self.is_moving = True
         
-        def wait_move_stop():
-            rsp_f = goal_handle.get_result_async()
-            rclpy.spin_until_future_complete(self, rsp_f, executor=self.executor)
-            self.get_logger().info('Move stopped')
-            self.is_moving = False
-            self.lock.release()
-            
-        t = Thread(target=wait_move_stop)
-        t.start()
+        self.goal_handles.append(goal_handle)
         
         return True, 'goal accepted'
-
+    
+    def is_moving(self):
+        if len(self.goal_handles) == 0:
+            return False
+        gh = self.goal_handles[-1]
+        not_is_moving_statuses = [GoalStatus.STATUS_SUCCEEDED, GoalStatus.STATUS_CANCELED, GoalStatus.STATUS_ABORTED]
+        return gh.status not in not_is_moving_statuses
+    
+    def cancel_nav(self):
+        if len(self.goal_handles) == 0:
+            return False, 'no goal to cancel'
+        gh = self.goal_handles[-1]
+        gh.cancel_goal()
+        return True, 'goal canceled'
 
 rclpy.init()
 node = SendNavGoalNode()
-# t = Thread(target=node.executor.spin)
-# t.start()
+executor = SingleThreadedExecutor()
+executor.add_node(node)
+executor_thread = Thread(target=executor.spin)
+executor_thread.start()
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -175,7 +174,17 @@ def initial_pose():
 @app.route('/is_moving', methods=['GET'])
 def is_moving():
     # 返回机器人是否在移动
-    return jsonify({'is_moving': node.is_moving})
+    return jsonify({'is_moving': node.is_moving()})
+
+@app.route('/cancel_nav', methods=['POST'])
+def cancel_nav():
+    success, message = node.cancel_nav()
+    if success:
+        return jsonify({'status': 'success', 'message': message})
+    else:
+        err = RuntimeError(message)
+        err.code = 500
+        raise err
 
 @app.route('/health', methods=['GET'])
 def health():
