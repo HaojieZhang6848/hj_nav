@@ -10,7 +10,6 @@ from flask import Flask, jsonify, make_response, request
 from multiprocessing.shared_memory import SharedMemory
 import time
 import atexit
-from datetime import datetime
 from flask_cors import CORS
 
 # 设置日志级别和格式
@@ -68,8 +67,8 @@ class RedObjServer(Node):
         if not get_red_detected():
             raise Exception('Red object not detected')
         red_x, red_y, red_theta = self.get_loc('red_object')
-        car_1_x, car_1_y, car_1_theta = self.get_loc('another_car_1')
-        car_2_x, car_2_y, car_2_theta = self.get_loc('another_car_2')
+        car_1_x, car_1_y, car_1_theta = 0.0, 0.0, 0.0
+        car_2_x, car_2_y, car_2_theta = 0.0, 0.0, 0.0
         
         return red_x, red_y, red_theta, car_1_x, car_1_y, car_1_theta, car_2_x, car_2_y, car_2_theta           
    

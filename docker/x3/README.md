@@ -9,3 +9,4 @@
 - 0.0.8: 在`red_detector`启动5秒后才启动`red_obj_server`，防止出现race condition；加入vim
 - 0.0.9: 在`nav_http_server`中添加了`/initial_pose`接口，用于设置小车的初始位置和朝向(amcl)
 - 0.0.9-7: 添加中途取消导航的功能
+- 0.0.10: 将红色物体的检测方式改为apriltag
