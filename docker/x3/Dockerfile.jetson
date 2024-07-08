@@ -14,6 +14,7 @@ COPY docker/x3/.bashrc /root/.bashrc
 # 代码
 COPY . src/hj_nav
 # 安装依赖
+RUN apt-get install ros-foxy-apriltag
 RUN bash -c "pip3 install -r src/hj_nav/nav_http_server/requirements.txt"
 RUN bash -c "pip3 install -r src/hj_nav/red_detector/requirements.txt"
 RUN bash -c "pip3 install -r src/hj_nav/hj_nav_launch/requirements.txt"
