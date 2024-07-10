@@ -44,7 +44,7 @@ class RedDetectorNode(Node):
         self.get_logger().info('Red Detector Node started')
         
         # 创建april tag检测结果的订阅回调
-        self.tag_sub = self.create_subscription(AprilTagDetectionArray, '/apriltag_detections', self.apriltag_callback, 10)
+        self.tag_sub = self.create_subscription(AprilTagDetectionArray, '/apriltag/detections', self.apriltag_callback, 10)
         
         # 创建tf广播器
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -56,20 +56,19 @@ class RedDetectorNode(Node):
             update_red_detected(False)
             return
         update_red_detected(True)
-        mark = detections[0]
-        pose = mark.pose.pose.pose.position
-        orientation = mark.pose.pose.pose.orientation
+        id = detections[0].id
+        frame_name = f'tag36h11:{id}'
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = 'camera_color_optical_frame'
+        t.header.frame_id = frame_name
         t.child_frame_id = 'red_object'
-        t.transform.translation.x = pose.x
-        t.transform.translation.y = pose.y
-        t.transform.translation.z = pose.z
-        t.transform.rotation.x = orientation.x
-        t.transform.rotation.y = orientation.y
-        t.transform.rotation.z = orientation.z
-        t.transform.rotation.w = orientation.w
+        t.transform.translation.x = 0.0
+        t.transform.translation.y = 0.0
+        t.transform.translation.z = 0.0
+        t.transform.rotation.x = 0.0
+        t.transform.rotation.y = 0.0
+        t.transform.rotation.z = 0.0
+        t.transform.rotation.w = 1.0
         self.tf_broadcaster.sendTransform(t)        
 
 

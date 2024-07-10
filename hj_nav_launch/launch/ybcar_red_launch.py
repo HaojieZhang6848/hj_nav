@@ -26,7 +26,7 @@ def generate_launch_description():
     
     apriltag_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('apriltag_ros'), 'launch', 'tag_realsense.launch.py')
+            os.path.join(get_package_share_directory('apriltag_ros'), 'launch', 'tag_36h11_all.launch.py')
         ),
         launch_arguments={
             'camera_name': LaunchConfiguration('camera_name'),
