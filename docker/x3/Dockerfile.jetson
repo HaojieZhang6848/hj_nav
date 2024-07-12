@@ -1,5 +1,9 @@
-FROM huajuan6848/x3_ros2:0.0.1
+FROM huajuan6848/x3_ros2:0.0.1-orig-nav
 WORKDIR /root/yahboomcar_ros2_ws/yahboomcar_ws
+# 换源.....
+RUN sed -i 's/ports.ubuntu.com/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list
+# 加入vim
+RUN apt-get update && apt-get install -y vim
 # ROS_DOMAIN_ID，这里先写死，后续可以在docker run时指定
 ENV ROS_DOMAIN_ID=32
 RUN mkdir -p src/hj_nav
